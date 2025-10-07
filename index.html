@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Arbitrage Stake Calculator</title>
+  <style>
+    :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --fg:#e5e7eb; --acc:#22d3ee; --green:#22c55e; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
+      background:linear-gradient(180deg,#0b1022,#0f172a 40%); color:var(--fg);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    }
+    .wrap{width:100%; max-width:860px}
+    .title{font-weight:800; letter-spacing:.2px; margin:0 0 18px; font-size:clamp(22px,3vw,34px)}
+    .subtitle{color:var(--muted); margin:-6px 0 22px; font-size:clamp(13px,1.8vw,15px)}
+    .card{
+      background:rgba(17,24,39,.85); border:1px solid rgba(148,163,184,.15);
+      border-radius:16px; padding:22px; box-shadow:0 12px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.02);
+      backdrop-filter:blur(6px)
+    }
+    .grid{display:grid; gap:14px; grid-template-columns:repeat(12,1fr)}
+    .col-6{grid-column:span 6} .col-3{grid-column:span 3} .col-4{grid-column:span 4} .col-8{grid-column:span 8} .col-12{grid-column:span 12}
+    @media (max-width:860px){ .col-6,.col-3,.col-4,.col-8{grid-column:span 12} }
+
+    label{display:block; font-size:12px; color:var(--muted); margin:6px 0 6px}
+    input{
+      width:100%; padding:12px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.18);
+      background:#0b1220; color:var(--fg); outline:none; font-size:15px;
+      transition:border-color .15s ease, box-shadow .15s ease;
+    }
+    input:focus{border-color:var(--acc); box-shadow:0 0 0 4px rgba(34,211,238,.14)}
+    .btnbar{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+    button{
+      appearance:none; border:none; background:linear-gradient(180deg,#22d3ee,#0ea5e9);
+      color:#001017; font-weight:700; padding:11px 14px; border-radius:12px; cursor:pointer;
+      box-shadow:0 6px 18px rgba(14,165,233,.35); transition:transform .06s ease, filter .2s ease;
+    }
+    button:hover{filter:brightness(1.05)}
+    button:active{transform:translateY(1px)}
+    .btn-ghost{
+      background:transparent; color:var(--fg); border:1px solid rgba(148,163,184,.25); box-shadow:none;
+    }
+    .out{
+      background:#0b1220; border:1px dashed rgba(148,163,184,.25); border-radius:14px; padding:14px;
+      display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+    }
+    .kv{display:flex; gap:10px; align-items:baseline}
+    .k{color:var(--muted); font-size:12px; width:140px}
+    .v{font-variant-numeric:tabular-nums}
+    .v.money{color:var(--green); font-weight:800}
+    .badge{display:inline-block; padding:.25rem .5rem; border-radius:999px; background:#0b1220; border:1px solid rgba(148,163,184,.25); color:var(--muted); font-size:12px}
+    .err{color:#fecaca; background:#450a0a; border:1px solid #7f1d1d; padding:10px 12px; border-radius:12px; display:none}
+    .hint{color:var(--muted); font-size:12px}
+    .foot{color:var(--muted); margin-top:12px; font-size:12px}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1 class="title">Arbitrage Stake Calculator</h1>
+    <p class="subtitle">Target a guaranteed profit across two opposing odds — with rounding and safe trimming.</p>
+
+    <div class="card">
+      <div class="grid">
+        <div class="col-6">
+          <label>Odds A (decimal, &gt; 1.01)</label>
+          <input id="oddsA" type="number" step="0.01" min="1.01" placeholder="e.g., 2.10" />
+        </div>
+        <div class="col-6">
+          <label>Odds B (decimal, &gt; 1.01)</label>
+          <input id="oddsB" type="number" step="0.01" min="1.01" placeholder="e.g., 1.90" />
+        </div>
+        <div class="col-6">
+          <label>Target profit (£)</label>
+          <input id="profit" type="number" step="0.01" min="0.01" placeholder="e.g., 10" />
+        </div>
+        <div class="col-6">
+          <label>Rounding step (£)</label>
+          <input id="step" type="number" step="0.01" min="0.01" value="5" />
+          <div class="hint">For bookies that only accept stakes in fixed increments (e.g., £5).</div>
+        </div>
+
+        <div class="col-12 btnbar">
+          <button id="calcBtn">Calculate</button>
+          <button id="fillBtn" class="btn-ghost">Sample data</button>
+          <button id="resetBtn" class="btn-ghost">Reset</button>
+        </div>
+
+        <div id="err" class="col-12 err"></div>
+
+        <div class="col-12">
+          <div class="out">
+            <div class="kv"><div class="k">Stake A</div><div id="outA" class="v money mono">—</div></div>
+            <span class="badge">£</span>
+
+            <div class="kv"><div class="k">Stake B</div><div id="outB" class="v money mono">—</div></div>
+            <span class="badge">£</span>
+
+            <div class="kv"><div class="k">Total stake</div><div id="outTotal" class="v money mono">—</div></div>
+            <span class="badge">£</span>
+
+            <div class="kv"><div class="k">Guaranteed profit</div><div id="outProfit" class="v money mono">—</div></div>
+            <span class="badge">£</span>
+
+            <div class="kv"><div class="k">ROI</div><div id="outRoi" class="v money mono">—</div></div>
+            <span class="badge">%</span>
+          </div>
+        </div>
+
+        <div class="col-12 foot">
+          <div>Diagnostics: <span id="diag" class="mono">—</span></div>
+          <div class="hint">
+            Formula: <span class="mono">stakeA = (G*oddsB)/(oddsA*oddsB - oddsA - oddsB)</span>, rounded to the nearest step,
+            then iteratively trimmed if the post-rounding guaranteed profit would be negative.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const fmt2 = (x) => Number.isFinite(x) ? x.toFixed(2) : "—";
+
+    function roundToStep(value, step){
+      if (step <= 0) return value;
+      return Math.round(value / step) * step;
+    }
+
+    function calculate(){
+      const err = $("err");
+      err.style.display = "none";
+      err.textContent = "";
+
+      const oddsA = parseFloat($("oddsA").value);
+      const oddsB = parseFloat($("oddsB").value);
+      const targetProfit = parseFloat($("profit").value);
+      const step = parseFloat($("step").value);
+
+      if (!(oddsA > 1.01) || !(oddsB > 1.01) || !(targetProfit > 0) || !(step > 0)){
+        showError("Please enter valid numbers (odds > 1.01, profit > 0, step > 0).");
+        return;
+      }
+
+      const invSum = 1/oddsA + 1/oddsB;
+      if (invSum >= 1){
+        showError(`No arbitrage: 1/oddsA + 1/oddsB = ${invSum.toFixed(6)} ≥ 1.`);
+        setOutputs(null);
+        $("diag").textContent = `inv_sum=${invSum.toFixed(6)}`;
+        return;
+      }
+
+      const den = oddsA*oddsB - oddsA - oddsB;
+      if (Math.abs(den) < 1e-12){
+        showError("Denominator too small — please double-check the odds!");
+        setOutputs(null);
+        return;
+      }
+
+      let stakeA = (targetProfit * oddsB) / den;
+      let stakeB = (targetProfit * oddsA) / den;
+
+      // Round to nearest step
+      stakeA = roundToStep(stakeA, step);
+      stakeB = roundToStep(stakeB, step);
+
+      // Post-rounding profits
+      let total = stakeA + stakeB;
+      let profitIfA = stakeA * oddsA - total;
+      let profitIfB = stakeB * oddsB - total;
+      let guaranteed = Math.min(profitIfA, profitIfB);
+
+      // Iterative trimming if guaranteed profit is negative
+      let guard = 0;
+      while (guaranteed < -1e-9 && (stakeA > 0 || stakeB > 0) && guard < 10000){
+        if (stakeA >= stakeB) { stakeA = Math.max(0, stakeA - step); }
+        else { stakeB = Math.max(0, stakeB - step); }
+        total = stakeA + stakeB;
+        profitIfA = stakeA * oddsA - total;
+        profitIfB = stakeB * oddsB - total;
+        guaranteed = Math.min(profitIfA, profitIfB);
+        guard++;
+      }
+
+      const roi = total > 0 ? (guaranteed / total * 100) : 0;
+
+      setOutputs({ stakeA, stakeB, total, guaranteed, roi });
+
+      $("diag").textContent =
+        `inv_sum=${invSum.toFixed(6)} | den=${den.toFixed(6)} | winA=${profitIfA.toFixed(2)} | winB=${profitIfB.toFixed(2)}`;
+
+      function showError(msg){
+        err.textContent = msg;
+        err.style.display = "block";
+      }
+    }
+
+    function setOutputs(res){
+      const set = (id, val) => $(id).textContent = val;
+      if (!res){
+        set("outA","—"); set("outB","—"); set("outTotal","—"); set("outProfit","—"); set("outRoi","—");
+        return;
+      }
+      set("outA", fmt2(res.stakeA));
+      set("outB", fmt2(res.stakeB));
+      set("outTotal", fmt2(res.total));
+      set("outProfit", "£" + fmt2(res.guaranteed));
+      set("outRoi", res.roi.toFixed(2));
+    }
+
+    $("calcBtn").addEventListener("click", calculate);
+    $("fillBtn").addEventListener("click", () => {
+      $("oddsA").value = "2.10";
+      $("oddsB").value = "1.90";
+      $("profit").value = "10";
+      $("step").value = "5";
+      $("err").style.display = "none";
+      calculate();
+    });
+    $("resetBtn").addEventListener("click", () => {
+      ["oddsA","oddsB","profit"].forEach(id => $(id).value = "");
+      $("step").value = "5";
+      setOutputs(null);
+      $("err").style.display = "none";
+      $("diag").textContent = "—";
+    });
+  </script>
+</body>
+</html>
