@@ -139,6 +139,11 @@
       const targetProfit = parseFloat($("profit").value);
       const step = parseFloat($("step").value);
 
+      function showError(msg){
+        err.textContent = msg;
+        err.style.display = "block";
+      }
+
       if (!(oddsA > 1.01) || !(oddsB > 1.01) || !(targetProfit > 0) || !(step > 0)){
         showError("Please enter valid numbers (odds > 1.01, profit > 0, step > 0).");
         return;
@@ -180,7 +185,6 @@
         total = stakeA + stakeB;
         profitIfA = stakeA * oddsA - total;
         profitIfB = stakeB * oddsB - total;
-        guaranteed = Math.min(profitIfA, profitIfB);
         guard++;
       }
 
@@ -190,11 +194,6 @@
 
       $("diag").textContent =
         `inv_sum=${invSum.toFixed(6)} | den=${den.toFixed(6)} | winA=${profitIfA.toFixed(2)} | winB=${profitIfB.toFixed(2)}`;
-
-      function showError(msg){
-        err.textContent = msg;
-        err.style.display = "block";
-      }
     }
 
     function setOutputs(res){
@@ -209,6 +208,21 @@
       set("outProfit", "£" + fmt2(res.guaranteed));
       set("outRoi", res.roi.toFixed(2));
     }
+
+    // URL paraméterek beolvasása: oddsA, oddsB
+    (function prefillFromUrl(){
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const paramOddsA = params.get("oddsA");
+        const paramOddsB = params.get("oddsB");
+
+        if (paramOddsA) $("oddsA").value = paramOddsA;
+        if (paramOddsB) $("oddsB").value = paramOddsB;
+        // profitot te írod be, ezért itt nem hívok calculate()-et
+      } catch (e) {
+        console.error("URL param parse error:", e);
+      }
+    })();
 
     $("calcBtn").addEventListener("click", calculate);
     $("fillBtn").addEventListener("click", () => {
