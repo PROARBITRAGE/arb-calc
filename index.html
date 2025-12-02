@@ -2,119 +2,171 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <title>Arbitrage Stake Calculator</title>
+  <!-- Telegram WebApp Script -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <style>
-    :root { --bg:#0f172a; --card:#111827; --muted:#94a3b8; --fg:#e5e7eb; --acc:#22d3ee; --green:#22c55e; }
+    /* Telegram Theme Variables with Fallback */
+    :root {
+      --bg: var(--tg-theme-bg-color, #0f172a);
+      --card: var(--tg-theme-secondary-bg-color, #111827);
+      --muted: var(--tg-theme-hint-color, #94a3b8);
+      --fg: var(--tg-theme-text-color, #e5e7eb);
+      --acc: var(--tg-theme-button-color, #22d3ee);
+      --btn-text: var(--tg-theme-button-text-color, #001017);
+      --green: #22c55e;
+    }
     *{box-sizing:border-box}
     body{
       margin:0; font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial;
-      background:linear-gradient(180deg,#0b1022,#0f172a 40%); color:var(--fg);
-      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+      background:var(--bg); color:var(--fg);
+      min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
     }
-    .wrap{width:100%; max-width:860px}
-    .title{font-weight:800; letter-spacing:.2px; margin:0 0 18px; font-size:clamp(22px,3vw,34px)}
-    .subtitle{color:var(--muted); margin:-6px 0 22px; font-size:clamp(13px,1.8vw,15px)}
+    .wrap{width:100%; max-width:600px} /* Kicsit szűkebb max-width mobilosabb érzethez */
+    .title{font-weight:800; letter-spacing:.2px; margin:0 0 10px; font-size:24px; text-align: center;}
+    .subtitle{color:var(--muted); margin:0 0 20px; font-size:14px; text-align: center; line-height: 1.4;}
+    
     .card{
-      background:rgba(17,24,39,.85); border:1px solid rgba(148,163,184,.15);
-      border-radius:16px; padding:22px; box-shadow:0 12px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.02);
-      backdrop-filter:blur(6px)
+      background:var(--card); 
+      border:1px solid rgba(148,163,184,.1);
+      border-radius:16px; padding:20px; 
+      box-shadow:0 4px 20px rgba(0,0,0,.2);
     }
-    .grid{display:grid; gap:14px; grid-template-columns:repeat(12,1fr)}
-    .col-6{grid-column:span 6} .col-3{grid-column:span 3} .col-4{grid-column:span 4} .col-8{grid-column:span 8} .col-12{grid-column:span 12}
-    @media (max-width:860px){ .col-6,.col-3,.col-4,.col-8{grid-column:span 12} }
+    .grid{display:grid; gap:16px; grid-template-columns:repeat(2,1fr)}
+    .col-1{grid-column:span 1} 
+    .col-2{grid-column:span 2} 
 
-    label{display:block; font-size:12px; color:var(--muted); margin:6px 0 6px}
+    label{display:block; font-size:13px; color:var(--muted); margin-bottom:6px}
     input{
-      width:100%; padding:12px 12px; border-radius:12px; border:1px solid rgba(148,163,184,.18);
-      background:#0b1220; color:var(--fg); outline:none; font-size:15px;
-      transition:border-color .15s ease, box-shadow .15s ease;
+      width:100%; padding:14px; border-radius:12px; 
+      border:1px solid rgba(148,163,184,.2);
+      background:var(--bg); color:var(--fg); outline:none; font-size:16px;
+      transition:border-color .15s;
     }
-    input:focus{border-color:var(--acc); box-shadow:0 0 0 4px rgba(34,211,238,.14)}
-    .btnbar{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+    input:focus{border-color:var(--acc); }
+    
+    .btnbar{display:flex; gap:10px; margin-top:10px}
     button{
-      appearance:none; border:none; background:linear-gradient(180deg,#22d3ee,#0ea5e9);
-      color:#001017; font-weight:700; padding:11px 14px; border-radius:12px; cursor:pointer;
-      box-shadow:0 6px 18px rgba(14,165,233,.35); transition:transform .06s ease, filter .2s ease;
+      appearance:none; border:none; background:var(--acc);
+      color:var(--btn-text); font-weight:700; padding:14px; border-radius:12px; cursor:pointer;
+      flex:1; font-size:15px;
+      transition:opacity .2s;
     }
-    button:hover{filter:brightness(1.05)}
-    button:active{transform:translateY(1px)}
+    button:active{opacity:0.8}
     .btn-ghost{
-      background:transparent; color:var(--fg); border:1px solid rgba(148,163,184,.25); box-shadow:none;
+      background:transparent; color:var(--fg); border:1px solid rgba(148,163,184,.3); flex:0 auto;
     }
+    
     .out{
-      background:#0b1220; border:1px dashed rgba(148,163,184,.25); border-radius:14px; padding:14px;
-      display:grid; grid-template-columns:1fr auto; gap:8px; align-items:center;
+      background:var(--bg); border-radius:14px; padding:16px;
+      display:flex; flex-direction: column; gap:12px; margin-top: 10px;
     }
-    .kv{display:flex; gap:10px; align-items:baseline}
-    .k{color:var(--muted); font-size:12px; width:140px}
-    .v{font-variant-numeric:tabular-nums}
-    .v.money{color:var(--green); font-weight:800}
-    .badge{display:inline-block; padding:.25rem .5rem; border-radius:999px; background:#0b1220; border:1px solid rgba(148,163,184,.25); color:var(--muted); font-size:12px}
-    .err{color:#fecaca; background:#450a0a; border:1px solid #7f1d1d; padding:10px 12px; border-radius:12px; display:none}
-    .hint{color:var(--muted); font-size:12px}
-    .foot{color:var(--muted); margin-top:12px; font-size:12px}
-    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
+    .kv{display:flex; justify-content: space-between; align-items:center; padding: 4px 0; border-bottom: 1px dashed rgba(148,163,184,.15);}
+    .kv:last-child{border-bottom:none}
+    .k{color:var(--muted); font-size:14px;}
+    .v-group {display:flex; align-items: center; gap: 8px;}
+    .v{font-variant-numeric:tabular-nums; font-size: 16px; font-weight: 600;}
+    .v.money{color:var(--green);}
+
+    /* Copy Button Styles */
+    .copy-btn {
+        background: rgba(148,163,184,0.15); color: var(--muted);
+        border: none; border-radius: 6px; padding: 4px 8px;
+        cursor: pointer; font-size: 12px; display: flex; align-items: center; justify-content: center;
+        width: 32px; height: 32px; transition: all 0.2s;
+        flex: none; /* Ne nyúljon meg */
+    }
+    .copy-btn:hover { background: rgba(148,163,184,0.3); color: var(--fg); }
+    .copy-btn.copied { background: var(--green); color: #fff; }
+
+    .err{color:#fca5a5; background:rgba(127,29,29,0.3); border:1px solid rgba(127,29,29,0.5); padding:12px; border-radius:12px; display:none; font-size: 14px; margin-top: 10px;}
+    .hint{color:var(--muted); font-size:12px; margin-top: 4px;}
+    .foot{color:var(--muted); margin-top:20px; font-size:11px; text-align: center; opacity: 0.6;}
+    .mono{font-family:monospace}
+    
+    /* Ha Telegramban vagyunk, rejtsük el a webes Calculate gombot, mert ott a MainButton */
+    body.is-telegram #calcBtn { display: none; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1 class="title">Arbitrage Stake Calculator</h1>
-    <p class="subtitle">Target a guaranteed profit across two opposing odds — with rounding and safe trimming.</p>
+    <h1 class="title">Arbitrage Calc</h1>
+    <p class="subtitle">Target profit with smart rounding</p>
 
     <div class="card">
       <div class="grid">
-        <div class="col-6">
-          <label>Odds A (decimal, &gt; 1.01)</label>
-          <input id="oddsA" type="number" step="0.01" min="1.01" placeholder="e.g., 2.10" />
+        <div class="col-1">
+          <label>Odds A</label>
+          <input id="oddsA" type="number" inputmode="decimal" step="0.01" min="1.01" placeholder="2.10" />
         </div>
-        <div class="col-6">
-          <label>Odds B (decimal, &gt; 1.01)</label>
-          <input id="oddsB" type="number" step="0.01" min="1.01" placeholder="e.g., 1.90" />
+        <div class="col-1">
+          <label>Odds B</label>
+          <input id="oddsB" type="number" inputmode="decimal" step="0.01" min="1.01" placeholder="1.90" />
         </div>
-        <div class="col-6">
-          <label>Target profit (£)</label>
-          <input id="profit" type="number" step="0.01" min="0.01" placeholder="e.g., 10" />
+        <div class="col-1">
+          <label>Profit (£)</label>
+          <input id="profit" type="number" inputmode="decimal" step="0.01" min="0.01" placeholder="10" />
         </div>
-        <div class="col-6">
-          <label>Rounding step (£)</label>
-          <input id="step" type="number" step="0.01" min="0.01" value="5" />
-          <div class="hint">For bookies that only accept stakes in fixed increments (e.g., £5).</div>
+        <div class="col-1">
+          <label>Rounding (£)</label>
+          <input id="step" type="number" inputmode="decimal" step="0.01" min="0.01" value="5" />
         </div>
 
-        <div class="col-12 btnbar">
-          <button id="calcBtn">Calculate</button>
-          <button id="fillBtn" class="btn-ghost">Sample data</button>
+        <div class="col-2 btnbar">
+          <button id="calcBtn">CALCULATE</button>
           <button id="resetBtn" class="btn-ghost">Reset</button>
         </div>
 
-        <div id="err" class="col-12 err"></div>
+        <div id="err" class="col-2 err"></div>
 
-        <div class="col-12">
+        <div class="col-2">
           <div class="out">
-            <div class="kv"><div class="k">Stake A</div><div id="outA" class="v money mono">—</div></div>
-            <span class="badge">£</span>
+            <!-- Stake A -->
+            <div class="kv">
+                <div class="k">Stake A</div>
+                <div class="v-group">
+                    <div id="outA" class="v money mono">—</div>
+                    <button class="copy-btn" onclick="copyToClip('outA', this)" title="Copy">📋</button>
+                </div>
+            </div>
 
-            <div class="kv"><div class="k">Stake B</div><div id="outB" class="v money mono">—</div></div>
-            <span class="badge">£</span>
+            <!-- Stake B -->
+            <div class="kv">
+                <div class="k">Stake B</div>
+                <div class="v-group">
+                    <div id="outB" class="v money mono">—</div>
+                    <button class="copy-btn" onclick="copyToClip('outB', this)" title="Copy">📋</button>
+                </div>
+            </div>
 
-            <div class="kv"><div class="k">Total stake</div><div id="outTotal" class="v money mono">—</div></div>
-            <span class="badge">£</span>
+            <!-- Total Stake -->
+            <div class="kv">
+                <div class="k">Total Stake</div>
+                <div class="v-group">
+                    <div id="outTotal" class="v mono">—</div>
+                </div>
+            </div>
 
-            <div class="kv"><div class="k">Guaranteed profit</div><div id="outProfit" class="v money mono">—</div></div>
-            <span class="badge">£</span>
+            <!-- Profit -->
+            <div class="kv">
+                <div class="k">Guaranteed Profit</div>
+                <div id="outProfit" class="v money mono">—</div>
+            </div>
 
-            <div class="kv"><div class="k">ROI</div><div id="outRoi" class="v money mono">—</div></div>
-            <span class="badge">%</span>
+            <!-- ROI -->
+            <div class="kv">
+                <div class="k">ROI</div>
+                <div class="v-group">
+                    <div id="outRoi" class="v mono">—</div>
+                    <span style="font-size:12px; color:var(--muted)">%</span>
+                </div>
+            </div>
           </div>
         </div>
 
-        <div class="col-12 foot">
-          <div>Diagnostics: <span id="diag" class="mono">—</span></div>
-          <div class="hint">
-            Formula: <span class="mono">stakeA = (G*oddsB)/(oddsA*oddsB - oddsA - oddsB)</span>, rounded to the nearest step,
-            then iteratively trimmed if the post-rounding guaranteed profit would be negative.
-          </div>
+        <div class="col-2 foot">
+            <div id="diag" class="mono" style="display:none;"></div>
         </div>
       </div>
     </div>
@@ -123,7 +175,74 @@
   <script>
     const $ = (id) => document.getElementById(id);
     const fmt2 = (x) => Number.isFinite(x) ? x.toFixed(2) : "—";
+    
+    // --- Telegram WebApp Setup ---
+    let tg = window.Telegram.WebApp;
+    
+    function initTelegram() {
+        if (tg.initDataUnsafe && Object.keys(tg.initDataUnsafe).length > 0) {
+            tg.expand(); // Teljes képernyő
+            document.body.classList.add('is-telegram');
+            
+            // Main Button beállítása
+            tg.MainButton.setText("CALCULATE");
+            tg.MainButton.show();
+            tg.MainButton.onClick(calculate);
+            
+            // Színvilág frissítése, ha változik a téma
+            tg.onEvent('themeChanged', function() {
+                document.documentElement.style.setProperty('--bg', tg.themeParams.bg_color);
+                // További színeket automatikusan kezel a var() fallback
+            });
+        }
+    }
 
+    // --- LocalStorage Handling ---
+    function loadSettings() {
+        const savedProfit = localStorage.getItem('arb_profit');
+        const savedStep = localStorage.getItem('arb_step');
+        if (savedProfit) $("profit").value = savedProfit;
+        if (savedStep) $("step").value = savedStep;
+    }
+
+    function saveSettings() {
+        localStorage.setItem('arb_profit', $("profit").value);
+        localStorage.setItem('arb_step', $("step").value);
+    }
+
+    // --- Clipboard Function ---
+    window.copyToClip = function(elementId, btn) {
+        const text = $(elementId).textContent;
+        if (text === "—" || !text) return;
+        
+        // Mobilon a clipboard API néha trükkös, fallback megoldás
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text).then(() => showCopied(btn));
+        } else {
+            // Fallback régebbi eszközökre
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            document.body.appendChild(textArea);
+            textArea.select();
+            try { document.execCommand('copy'); showCopied(btn); } catch (err) {}
+            document.body.removeChild(textArea);
+        }
+    };
+
+    function showCopied(btn) {
+        const original = btn.innerHTML;
+        btn.innerHTML = "✓";
+        btn.classList.add("copied");
+        // Haptic feedback ha Telegramban vagyunk
+        if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+        
+        setTimeout(() => {
+            btn.innerHTML = original;
+            btn.classList.remove("copied");
+        }, 1500);
+    }
+
+    // --- Core Logic ---
     function roundToStep(value, step){
       if (step <= 0) return value;
       return Math.round(value / step) * step;
@@ -139,61 +258,54 @@
       const targetProfit = parseFloat($("profit").value);
       const step = parseFloat($("step").value);
 
-      function showError(msg){
-        err.textContent = msg;
-        err.style.display = "block";
-      }
+      // Save inputs for next time
+      saveSettings();
 
       if (!(oddsA > 1.01) || !(oddsB > 1.01) || !(targetProfit > 0) || !(step > 0)){
-        showError("Please enter valid numbers (odds > 1.01, profit > 0, step > 0).");
+        err.textContent = "Check inputs!";
+        err.style.display = "block";
+        if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('error');
         return;
       }
 
       const invSum = 1/oddsA + 1/oddsB;
       if (invSum >= 1){
-        showError(`No arbitrage: 1/oddsA + 1/oddsB = ${invSum.toFixed(6)} ≥ 1.`);
+        err.textContent = `No arb: ${(invSum*100).toFixed(1)}%`;
+        err.style.display = "block";
         setOutputs(null);
-        $("diag").textContent = `inv_sum=${invSum.toFixed(6)}`;
+        if(tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
         return;
       }
 
       const den = oddsA*oddsB - oddsA - oddsB;
-      if (Math.abs(den) < 1e-12){
-        showError("Denominator too small — please double-check the odds!");
-        setOutputs(null);
-        return;
-      }
-
       let stakeA = (targetProfit * oddsB) / den;
       let stakeB = (targetProfit * oddsA) / den;
 
-      // Round to nearest step
       stakeA = roundToStep(stakeA, step);
       stakeB = roundToStep(stakeB, step);
 
-      // Post-rounding profits
       let total = stakeA + stakeB;
       let profitIfA = stakeA * oddsA - total;
       let profitIfB = stakeB * oddsB - total;
       let guaranteed = Math.min(profitIfA, profitIfB);
 
-      // Iterative trimming if guaranteed profit is negative
+      // Trimming logic
       let guard = 0;
-      while (guaranteed < -1e-9 && (stakeA > 0 || stakeB > 0) && guard < 10000){
-        if (stakeA >= stakeB) { stakeA = Math.max(0, stakeA - step); }
-        else { stakeB = Math.max(0, stakeB - step); }
+      while (guaranteed < -0.01 && (stakeA > 0 || stakeB > 0) && guard < 1000){
+        if (stakeA >= stakeB) stakeA = Math.max(0, stakeA - step);
+        else stakeB = Math.max(0, stakeB - step);
+        
         total = stakeA + stakeB;
         profitIfA = stakeA * oddsA - total;
         profitIfB = stakeB * oddsB - total;
+        guaranteed = Math.min(profitIfA, profitIfB);
         guard++;
       }
 
       const roi = total > 0 ? (guaranteed / total * 100) : 0;
-
       setOutputs({ stakeA, stakeB, total, guaranteed, roi });
-
-      $("diag").textContent =
-        `inv_sum=${invSum.toFixed(6)} | den=${den.toFixed(6)} | winA=${profitIfA.toFixed(2)} | winB=${profitIfB.toFixed(2)}`;
+      
+      if(tg.HapticFeedback) tg.HapticFeedback.impactOccurred('light');
     }
 
     function setOutputs(res){
@@ -207,39 +319,32 @@
       set("outTotal", fmt2(res.total));
       set("outProfit", "£" + fmt2(res.guaranteed));
       set("outRoi", res.roi.toFixed(2));
+      
+      // Visual warning if profit is very low/negative
+      $("outProfit").style.color = res.guaranteed < 0 ? "#f87171" : "var(--green)";
     }
 
-    // URL paraméterek beolvasása: oddsA, oddsB
-    (function prefillFromUrl(){
-      try {
-        const params = new URLSearchParams(window.location.search);
-        const paramOddsA = params.get("oddsA");
-        const paramOddsB = params.get("oddsB");
-
-        if (paramOddsA) $("oddsA").value = paramOddsA;
-        if (paramOddsB) $("oddsB").value = paramOddsB;
-        // profitot te írod be, ezért itt nem hívok calculate()-et
-      } catch (e) {
-        console.error("URL param parse error:", e);
-      }
+    // --- URL Params & Init ---
+    (function init(){
+        initTelegram();
+        loadSettings(); // Load saved Step/Profit
+        
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const pA = params.get("oddsA");
+            const pB = params.get("oddsB");
+            if (pA) $("oddsA").value = pA;
+            if (pB) $("oddsB").value = pB;
+        } catch (e) {}
     })();
 
     $("calcBtn").addEventListener("click", calculate);
-    $("fillBtn").addEventListener("click", () => {
-      $("oddsA").value = "2.10";
-      $("oddsB").value = "1.90";
-      $("profit").value = "10";
-      $("step").value = "5";
-      $("err").style.display = "none";
-      calculate();
-    });
     $("resetBtn").addEventListener("click", () => {
-      ["oddsA","oddsB","profit"].forEach(id => $(id).value = "");
-      $("step").value = "5";
+      $("oddsA").value = ""; $("oddsB").value = "";
       setOutputs(null);
       $("err").style.display = "none";
-      $("diag").textContent = "—";
     });
+
   </script>
 </body>
 </html>
